@@ -4,7 +4,9 @@ export function createLightbox(gallerySelector) {
 
   const items = Array.from(gallery.querySelectorAll('a[data-index]'));
   let current = -1;
+  let busy = false; // lai neviens rapid click nesabojā galeriju
 
+  // Backdrop un saturs
   const backdrop = document.createElement('div');
   backdrop.className = 'lb-backdrop';
   backdrop.setAttribute('role', 'dialog');
@@ -16,10 +18,10 @@ export function createLightbox(gallerySelector) {
   const img = document.createElement('img');
   img.className = 'lb-img';
   img.alt = '';
+  img.loading = 'lazy'; // lazy-load
 
   const caption = document.createElement('div');
   caption.className = 'lb-caption';
-  caption.textContent = '';
 
   const btnClose = document.createElement('button');
   btnClose.className = 'lb-close';
@@ -39,15 +41,13 @@ export function createLightbox(gallerySelector) {
   btnNext.setAttribute('aria-label', 'Next');
   btnNext.textContent = '›';
 
-  content.appendChild(img);
-  content.appendChild(caption);
-  content.appendChild(btnClose);
-  content.appendChild(btnPrev);
-  content.appendChild(btnNext);
+  content.append(img, caption, btnClose, btnPrev, btnNext);
   backdrop.appendChild(content);
   document.body.appendChild(backdrop);
 
   function open(index) {
+    if (busy) return;
+    busy = true;
     current = index;
     const el = items[current];
     const href = el.getAttribute('href');
@@ -56,6 +56,7 @@ export function createLightbox(gallerySelector) {
     backdrop.classList.add('active');
     document.dispatchEvent(new CustomEvent('lightbox-open'));
     document.body.style.overflow = 'hidden';
+    setTimeout(() => busy = false, 200);
   }
 
   function close() {

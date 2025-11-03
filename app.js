@@ -1,4 +1,4 @@
-import { createLightbox } from "./lightbox.js"; // precīzs ceļš
+import { createLightbox } from "./lightbox.js";
 
 // Uzstāda aktuālo gadu footerī
 function initYear() {
@@ -71,12 +71,6 @@ function revealSections() {
   const sections = document.querySelectorAll('.section');
   if (!sections.length) return;
 
-  const preferReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (preferReduced) {
-    sections.forEach(s => s.classList.add('in'));
-    return;
-  }
-
   const io = new IntersectionObserver((entries, observer) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -91,7 +85,6 @@ function revealSections() {
 
 // Particles uz melna fona
 function createParticles() {
-  const preferReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const canvas = document.getElementById('particles');
   if (!canvas) return { pause() {}, play() {}, isPaused: true };
 
@@ -99,11 +92,11 @@ function createParticles() {
   let w = canvas.width = window.innerWidth;
   let h = canvas.height = window.innerHeight;
   let rafId = null;
-  let paused = preferReduced;
+  let paused = false;
 
   const colors = ['#FF6A00','#FFA94D'];
 
-  const particles = Array.from({ length: preferReduced ? 30 : 120 }, () => ({
+  const particles = Array.from({ length: 120 }, () => ({
     x: Math.random()*w,
     y: Math.random()*h,
     r: Math.random()*1.8+0.4,
@@ -114,19 +107,23 @@ function createParticles() {
     flicker: Math.random()*0.02+0.005
   }));
 
-  const draw = () => {
-    ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'; // mazliet kontrastīgāks fons
-    ctx.fillRect(0,0,w,h);
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(255,106,0,0.08)';
+    ctx.fillRect(0, 0, w, h);
 
     for (const p of particles) {
       p.x += p.vx + (Math.random()-0.5)*0.02;
       p.y += p.vy;
       p.o += (Math.random()-0.5)*p.flicker;
-      if (p.y < -10) { p.y = h+10; p.x = Math.random()*w; }
+
+      if (p.y < -10) { 
+        p.y = h + 10; 
+        p.x = Math.random()*w; 
+      }
 
       ctx.beginPath();
-      ctx.fillStyle = p.c;
+      ctx.fillStyle = p.c; 
       ctx.globalAlpha = Math.max(0.08, Math.min(0.8, p.o));
       ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
       ctx.fill();
@@ -134,50 +131,66 @@ function createParticles() {
     }
 
     rafId = requestAnimationFrame(draw);
-  };
+  }
 
-  const onResize = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; };
+  const onResize = () => {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  };
   window.addEventListener('resize', onResize, { passive: true });
 
-  const play = () => { if (!rafId) { paused = false; rafId = requestAnimationFrame(draw); } };
-  const pause = () => { paused = true; if (rafId) { cancelAnimationFrame(rafId); rafId = null; } ctx.clearRect(0,0,w,h); };
+  const play = () => { 
+    if (!rafId) { 
+      paused = false; 
+      rafId = requestAnimationFrame(draw); 
+    } 
+  };
+  const pause = () => { 
+    paused = true; 
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; } 
+    ctx.clearRect(0, 0, w, h); 
+  };
 
-  if (!paused) play();
+  play(); // automātiski ieslēdzam
 
   return { pause, play, isPaused: paused };
 }
 
-let particlesCtrl;
-
+// Galvenā inicializācija
 function init() {
   initYear();
   initNav();
   buildGallery();
   createLightbox('#gallery');
   revealSections();
-
-  particlesCtrl = createParticles();
+  
+  const particlesCtrl = createParticles();
 
   const toggle = document.getElementById('particles-toggle');
   if (toggle) {
     toggle.addEventListener('click', () => {
       const nowPause = !toggle.getAttribute('aria-pressed') || toggle.getAttribute('aria-pressed') === 'false';
       toggle.setAttribute('aria-pressed', String(nowPause));
-      if (nowPause) { particlesCtrl.pause(); toggle.textContent = 'Resume Sparks'; }
-      else { particlesCtrl.play(); toggle.textContent = 'Pause Sparks'; }
+      if (nowPause) {
+        particlesCtrl.pause();
+        toggle.textContent = 'Resume Sparks';
+      } else {
+        particlesCtrl.play();
+        toggle.textContent = 'Pause Sparks';
+      }
     });
   }
 
-  // Pauze particles, ja lightbox atvērts
+  // Lightbox event pauses
   document.addEventListener('lightbox-open', () => particlesCtrl && particlesCtrl.pause());
   document.addEventListener('lightbox-close', () => {
-    const toggle = document.getElementById('particles-toggle');
-    if (toggle && toggle.getAttribute('aria-pressed') === 'true') return;
+    const toggleBtn = document.getElementById('particles-toggle');
+    if (toggleBtn && toggleBtn.getAttribute('aria-pressed') === 'true') return;
     particlesCtrl && particlesCtrl.play();
   });
 }
 
-// Startē, kad DOM gatavs
+// DOM ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
